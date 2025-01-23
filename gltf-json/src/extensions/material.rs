@@ -1,3 +1,5 @@
+#[cfg(feature = "KHR_texture_transform")]
+use crate::extensions::texture::TextureTransform;
 #[allow(unused_imports)] // different features use different imports
 use crate::{material::StrengthFactor, texture, validation::Validate, Extras};
 use gltf_derive::Validate;
@@ -63,6 +65,14 @@ pub struct Material {
         skip_serializing_if = "Option::is_none"
     )]
     pub emissive_strength: Option<EmissiveStrength>,
+
+    #[cfg(feature = "KHR_materials_clearcoat")]
+    #[serde(
+        default,
+        rename = "KHR_materials_clearcoat",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub clearcoat: Option<Clearcoat>,
 
     #[cfg(feature = "extensions")]
     #[serde(default, flatten)]
@@ -137,6 +147,14 @@ pub struct PbrSpecularGlossiness {
 /// Defines the normal texture of a material.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, Validate)]
 pub struct NormalTexture {
+    #[cfg(feature = "KHR_texture_transform")]
+    #[serde(
+        default,
+        rename = "KHR_texture_transform",
+        skip_serializing_if = "Option::is_none"
+    )]
+
+    pub texture_transform: Option<TextureTransform>,
     #[cfg(feature = "extensions")]
     #[serde(default, flatten)]
     pub others: Map<String, Value>,
@@ -145,6 +163,14 @@ pub struct NormalTexture {
 /// Defines the occlusion texture of a material.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, Validate)]
 pub struct OcclusionTexture {
+    #[cfg(feature = "KHR_texture_transform")]
+    #[serde(
+        default,
+        rename = "KHR_texture_transform",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub texture_transform: Option<TextureTransform>,
+    
     #[cfg(feature = "extensions")]
     #[serde(default, flatten)]
     pub others: Map<String, Value>,
@@ -410,6 +436,59 @@ pub struct Specular {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub specular_color_texture: Option<texture::Info>,
 
+    /// Optional application specific data.
+    #[cfg_attr(feature = "extras", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(not(feature = "extras"), serde(skip_serializing))]
+    pub extras: Extras,
+}
+
+#[cfg(feature = "KHR_materials_clearcoat")]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+pub struct ClearcoatFactor(pub f32);
+#[cfg(feature = "KHR_materials_clearcoat")]
+impl Default for ClearcoatFactor {
+    fn default() -> Self {
+        ClearcoatFactor(0.0)
+    }
+}
+#[cfg(feature = "KHR_materials_clearcoat")]
+impl Validate for ClearcoatFactor {}
+/// A number in the inclusive range [0.0, +inf] with a default value of 0.0.
+#[cfg(feature = "KHR_materials_clearcoat")]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+pub struct ClearcoatRoughnessFactor(pub f32);
+#[cfg(feature = "KHR_materials_clearcoat")]
+impl Default for ClearcoatRoughnessFactor {
+    fn default() -> Self {
+        ClearcoatRoughnessFactor(0.0)
+    }
+}
+#[cfg(feature = "KHR_materials_clearcoat")]
+impl Validate for ClearcoatRoughnessFactor {}
+#[cfg(feature = "KHR_materials_clearcoat")]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Validate)]
+#[serde(default, rename_all = "camelCase")]
+pub struct Clearcoat {
+    /// The clearcoat layer intensity (aka opacity) of the material.
+    /// A value of 0.0 means the material has no clearcoat layer enabled.
+    pub clearcoat_factor: ClearcoatFactor,
+    /// The clearcoat layer intensity texture.
+    /// These values are sampled from the R channel.
+    /// The values are linear. Use value 1.0 if no texture is supplied.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub clearcoat_texture: Option<texture::Info>,
+    /// The clearcoat layer roughness of the material.
+    pub clearcoat_roughness_factor: ClearcoatRoughnessFactor,
+    /// The clearcoat layer roughness texture.
+    /// These values are sampled from the G channel.
+    /// The values are linear. Use value 1.0 if no texture is supplied.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub clearcoat_roughness_texture: Option<texture::Info>,
+    /// A tangent space normal map for the clearcoat layer.
+    /// If desired, this may be a reference to the same normal map used by the base material.
+    /// If not supplied, no normal mapping is applied to the clear coat layer.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub clearcoat_normal_texture: Option<texture::Info>,
     /// Optional application specific data.
     #[cfg_attr(feature = "extras", serde(skip_serializing_if = "Option::is_none"))]
     #[cfg_attr(not(feature = "extras"), serde(skip_serializing))]
